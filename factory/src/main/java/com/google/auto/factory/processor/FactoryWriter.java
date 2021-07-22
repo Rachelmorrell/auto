@@ -19,6 +19,7 @@ import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotatio
 import static com.squareup.javapoet.MethodSpec.constructorBuilder;
 import static com.squareup.javapoet.MethodSpec.methodBuilder;
 import static com.squareup.javapoet.TypeSpec.classBuilder;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -79,12 +80,10 @@ final class FactoryWriter {
     this.factoriesBeingCreated = factoriesBeingCreated;
   }
 
-  void writeFactory(FactoryDescriptor descriptor)
-      throws IOException {
+  void writeFactory(FactoryDescriptor descriptor) throws IOException {
     String factoryName = descriptor.name().className();
     TypeSpec.Builder factory =
-        classBuilder(factoryName)
-            .addOriginatingElement(descriptor.declaration().targetType());
+        classBuilder(factoryName).addOriginatingElement(descriptor.declaration().targetType());
     generatedAnnotationSpec(
             elements,
             sourceVersion,
@@ -176,7 +175,7 @@ final class FactoryWriter {
             checkNotNull = false;
           }
         } else {
-          ProviderField provider = descriptor.providers().get(parameter.key());
+          ProviderField provider = requireNonNull(descriptor.providers().get(parameter.key()));
           argument = CodeBlock.of(provider.name());
           if (parameter.isProvider()) {
             // Providers are checked for nullness in the Factory's constructor.
@@ -198,8 +197,7 @@ final class FactoryWriter {
     }
   }
 
-  private void addImplementationMethods(
-      TypeSpec.Builder factory, FactoryDescriptor descriptor) {
+  private void addImplementationMethods(TypeSpec.Builder factory, FactoryDescriptor descriptor) {
     for (ImplementationMethodDescriptor methodDescriptor :
         descriptor.implementationMethodDescriptors()) {
       MethodSpec.Builder implementationMethod =
@@ -237,9 +235,7 @@ final class FactoryWriter {
               .map(AnnotationSpec::get)
               .collect(toList());
       ParameterSpec parameterSpec =
-          ParameterSpec.builder(type, parameter.name())
-              .addAnnotations(annotations)
-              .build();
+          ParameterSpec.builder(type, parameter.name()).addAnnotations(annotations).build();
       builder.add(parameterSpec);
     }
     return builder.build();

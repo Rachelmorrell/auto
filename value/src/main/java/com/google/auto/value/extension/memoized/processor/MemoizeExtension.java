@@ -19,12 +19,12 @@ import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.GeneratedAnnotationSpecs.generatedAnnotationSpec;
 import static com.google.auto.common.MoreElements.getPackage;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
+import static com.google.auto.common.MoreStreams.toImmutableList;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.auto.value.extension.memoized.processor.ClassNames.MEMOIZED_NAME;
 import static com.google.auto.value.extension.memoized.processor.MemoizedValidator.getAnnotationMirror;
 import static com.google.common.base.Predicates.equalTo;
 import static com.google.common.base.Predicates.not;
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Iterables.filter;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Sets.union;
@@ -597,9 +597,7 @@ public final class MemoizeExtension extends AutoValueExtension {
   /** Translate a {@link TypeMirror} into a {@link TypeName}, including type annotations. */
   private static TypeName annotatedType(TypeMirror type) {
     List<AnnotationSpec> annotations =
-        type.getAnnotationMirrors().stream()
-            .map(AnnotationSpec::get)
-            .collect(toList());
+        type.getAnnotationMirrors().stream().map(AnnotationSpec::get).collect(toList());
     return TypeName.get(type).annotated(annotations);
   }
 }

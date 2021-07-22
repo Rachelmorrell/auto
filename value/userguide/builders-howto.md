@@ -154,7 +154,7 @@ public abstract class Animal {
 
   abstract Builder toBuilder();
 
-  public Animal withName(String name) {
+  public final Animal withName(String name) {
     return toBuilder().setName(name).build();
   }
 
@@ -201,7 +201,7 @@ public abstract class Animal {
 
     abstract Animal autoBuild();  // not public
 
-    public Animal build() {
+    public final Animal build() {
       Animal animal = autoBuild();
       Preconditions.checkState(animal.numberOfLegs() >= 0, "Negative legs");
       return animal;
@@ -235,7 +235,7 @@ public abstract class Animal {
 
     abstract Animal autoBuild(); // not public
 
-    public Animal build() {
+    public final Animal build() {
       setName(name().toLowerCase());
       return autoBuild();
     }
@@ -279,7 +279,7 @@ public abstract class Animal {
 
     abstract Animal autoBuild(); // not public
 
-    public Animal build() {
+    public final Animal build() {
       if (!name().isPresent()) {
         setName(numberOfLegs() + "-legged creature");
       }
@@ -311,7 +311,8 @@ property of type `Optional<String>`, say, then it will default to an empty
 `Optional` without needing to [specify](#default) a default explicitly. And,
 instead of or as well as the normal `setFoo(Optional<String>)` method, you can
 have `setFoo(String)`. Then `setFoo(s)` is equivalent to
-`setFoo(Optional.of(s))`.
+`setFoo(Optional.of(s))`. (If it is `setFoo(@Nullable String)`, then `setFoo(s)`
+is equivalent to `setFoo(Optional.ofNullable(s))`.)
 
 Here, `Optional` means either [`java.util.Optional`] from Java (Java 8 or
 later), or [`com.google.common.base.Optional`] from Guava. Java 8 also
@@ -490,7 +491,7 @@ public abstract class Animal {
     public abstract Builder setNumberOfLegs(int value);
 
     abstract ImmutableSet.Builder<String> countriesBuilder();
-    public Builder addCountry(String value) {
+    public final Builder addCountry(String value) {
       countriesBuilder().add(value);
       return this;
     }

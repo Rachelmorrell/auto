@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package tests;
+package com.google.auto.common;
 
-import java.util.RandomAccess;
-import javax.annotation.processing.Generated;
-import javax.inject.Inject;
-
-@Generated(
-    value = "com.google.auto.factory.processor.AutoFactoryProcessor",
-    comments = "https://github.com/google/auto/tree/master/factory"
-    )
-final class SimpleClassImplementingMarkerFactory implements RandomAccess {
-  @Inject
-  SimpleClassImplementingMarkerFactory() {}
-
-  SimpleClassImplementingMarker create() {
-    return new SimpleClassImplementingMarker();
-  }
-}

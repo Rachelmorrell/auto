@@ -64,6 +64,7 @@ abstract class Parameter {
   abstract String name();
 
   abstract Key key();
+
   abstract Optional<Equivalence.Wrapper<AnnotationMirror>> nullableWrapper();
 
   Optional<AnnotationMirror> nullable() {
@@ -106,7 +107,7 @@ abstract class Parameter {
     Set<String> names = Sets.newHashSetWithExpectedSize(variables.size());
     for (int i = 0; i < variables.size(); i++) {
       Parameter parameter = forVariableElement(variables.get(i), variableTypes.get(i), types);
-      checkArgument(names.add(parameter.name()));
+      checkArgument(names.add(parameter.name()), "Duplicate parameter name: %s", parameter.name());
       builder.add(parameter);
     }
     ImmutableSet<Parameter> parameters = builder.build();

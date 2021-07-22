@@ -125,6 +125,57 @@ public final class AutoBuilderTest {
     assertThat(x.getBar()).isEqualTo("skidoo");
   }
 
+  enum Truthiness {
+    FALSY,
+    TRUTHY
+  }
+
+  @interface MyAnnotation {
+    String value();
+
+    int DEFAULT_ID = -1;
+
+    int id() default DEFAULT_ID;
+
+    Truthiness DEFAULT_TRUTHINESS = Truthiness.FALSY;
+
+    Truthiness truthiness() default Truthiness.FALSY;
+  }
+
+  // This method has a parameter for `truthiness`, even though that has a default, but it has no
+  // parameter for `id`, which also has a default.
+  @AutoAnnotation
+  static MyAnnotation myAnnotation(String value, Truthiness truthiness) {
+    return new AutoAnnotation_AutoBuilderTest_myAnnotation(value, truthiness);
+  }
+
+  @AutoBuilder(callMethod = "myAnnotation")
+  interface MyAnnotationBuilder {
+    MyAnnotationBuilder value(String x);
+
+    MyAnnotationBuilder truthiness(Truthiness x);
+
+    MyAnnotation build();
+  }
+
+  static MyAnnotationBuilder myAnnotationBuilder() {
+    return new AutoBuilder_AutoBuilderTest_MyAnnotationBuilder()
+        .truthiness(MyAnnotation.DEFAULT_TRUTHINESS);
+  }
+
+  @Test
+  public void simpleAutoAnnotation() {
+    MyAnnotation annotation1 = myAnnotationBuilder().value("foo").build();
+    assertThat(annotation1.value()).isEqualTo("foo");
+    assertThat(annotation1.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation1.truthiness()).isEqualTo(MyAnnotation.DEFAULT_TRUTHINESS);
+    MyAnnotation annotation2 =
+        myAnnotationBuilder().value("bar").truthiness(Truthiness.TRUTHY).build();
+    assertThat(annotation2.value()).isEqualTo("bar");
+    assertThat(annotation2.id()).isEqualTo(MyAnnotation.DEFAULT_ID);
+    assertThat(annotation2.truthiness()).isEqualTo(Truthiness.TRUTHY);
+  }
+
   static class Overload {
     final int anInt;
     final String aString;
@@ -354,6 +405,30 @@ public final class AutoBuilderTest {
     }
   }
 
+  static <T> String concatList(ImmutableList<T> list) {
+    // We're avoiding streams for now so we compile this in Java 7 mode in CompileWithEclipseTest.
+    StringBuilder sb = new StringBuilder();
+    for (T element : list) {
+      sb.append(element);
+    }
+    return sb.toString();
+  }
+
+  @AutoBuilder(callMethod = "concatList")
+  interface ConcatListCaller<T> {
+    ImmutableList.Builder<T> listBuilder();
+
+    String call();
+  }
+
+  @Test
+  public void propertyBuilderWithoutSetter() {
+    ConcatListCaller<Integer> caller = new AutoBuilder_AutoBuilderTest_ConcatListCaller<>();
+    caller.listBuilder().add(1, 1, 2, 3, 5, 8);
+    String s = caller.call();
+    assertThat(s).isEqualTo("112358");
+  }
+
   static <K, V extends Number> Map<K, V> singletonMap(K key, V value) {
     return Collections.singletonMap(key, value);
   }
@@ -365,7 +440,9 @@ public final class AutoBuilderTest {
   @AutoBuilder(callMethod = "singletonMap")
   interface SingletonMapBuilder<K, V extends Number> {
     SingletonMapBuilder<K, V> key(K key);
+
     SingletonMapBuilder<K, V> value(V value);
+
     Map<K, V> build();
   }
 
@@ -414,6 +491,7 @@ public final class AutoBuilderTest {
   @AutoBuilder(ofClass = SingletonSet.class)
   interface SingletonSetBuilder<E> {
     SingletonSetBuilder<E> setElement(E element);
+
     SingletonSet<E> build();
   }
 
@@ -446,7 +524,9 @@ public final class AutoBuilderTest {
   @AutoBuilder(ofClass = TypedSingletonSet.class)
   interface TypedSingletonSetBuilder<E, T extends E> {
     TypedSingletonSetBuilder<E, T> setElement(T element);
+
     TypedSingletonSetBuilder<E, T> setType(Class<T> type);
+
     TypedSingletonSet<E> build();
   }
 
@@ -468,9 +548,13 @@ public final class AutoBuilderTest {
   @AutoBuilder(callMethod = "pair")
   interface PairBuilder<T> {
     PairBuilder<T> setFirst(T x);
+
     T getFirst();
+
     PairBuilder<T> setSecond(T x);
+
     Optional<T> getSecond();
+
     ImmutableList<T> build();
   }
 

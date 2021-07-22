@@ -58,14 +58,15 @@ public final class AutoBuilderCompilationTest {
           "",
           "  @Override",
           "  public Baz build() {",
-          "    String missing = \"\";",
-          "    if (this.anInt == null) {",
-          "      missing += \" anInt\";",
-          "    }",
-          "    if (this.aString == null) {",
-          "      missing += \" aString\";",
-          "    }",
-          "    if (!missing.isEmpty()) {",
+          "    if (this.anInt == null",
+          "        || this.aString == null) {",
+          "      StringBuilder missing = new StringBuilder();",
+          "      if (this.anInt == null) {",
+          "        missing.append(\" anInt\");",
+          "      }",
+          "      if (this.aString == null) {",
+          "        missing.append(\" aString\");",
+          "      }",
           "      throw new IllegalStateException(\"Missing required properties:\" + missing);",
           "    }",
           "    return new Baz(",
@@ -152,6 +153,49 @@ public final class AutoBuilderCompilationTest {
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoBuilder_Baz_Builder")
         .hasSourceEquivalentTo(EXPECTED_SIMPLE_OUTPUT);
+  }
+
+  @Test
+  public void buildOtherPackage() {
+    JavaFileObject built =
+        JavaFileObjects.forSourceLines(
+            "com.example.Built",
+            "package com.example;",
+            "",
+            "public class Built {",
+            "  private final int anInt;",
+            "  private final String aString;",
+            "",
+            "  public Built(int anInt, String aString) {",
+            "    this.anInt = anInt;",
+            "    this.aString = aString;",
+            "  }",
+            "}");
+    JavaFileObject builder =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Builder",
+            "package foo.bar;",
+            "",
+            "import com.example.Built;",
+            "import com.google.auto.value.AutoBuilder;",
+            "",
+            "@AutoBuilder(ofClass = Built.class)",
+            "public interface Builder {",
+            "  public static Builder builder() {",
+            "    return new AutoBuilder_Builder();",
+            "  }",
+            "",
+            "  Builder setAnInt(int x);",
+            "  Builder setAString(String x);",
+            "  Built build();",
+            "}");
+    Compilation compilation =
+        javac()
+            .withProcessors(new AutoBuilderProcessor())
+            .withOptions("-Acom.google.auto.value.AutoBuilderIsUnstable")
+            .compile(built, builder);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation).generatedSourceFile("foo.bar.AutoBuilder_Builder");
   }
 
   @Test
@@ -647,8 +691,8 @@ public final class AutoBuilderCompilationTest {
     assertThat(compilation).failed();
     assertThat(compilation)
         .hadErrorContaining(
-            "[AutoBuilderBuilderWhatProp] Method does not correspond to a parameter of Baz(int one,"
-                + " int two)")
+            "[AutoBuilderBuilderWhatProp] Method three does not correspond to "
+                + "a parameter of Baz(int one, int two)")
         .inFile(javaFileObject)
         .onLineContaining("three(int x)");
   }
@@ -693,7 +737,7 @@ public final class AutoBuilderCompilationTest {
             "package foo.bar;",
             "",
             "import com.google.auto.value.AutoBuilder;",
-            "import org.jspecify.nullness.Nullable;",
+            "import org.checkerframework.checker.nullness.qual.Nullable;",
             "",
             "class Baz {",
             "  Baz(String thing) {}",
@@ -706,7 +750,7 @@ public final class AutoBuilderCompilationTest {
             "}");
     JavaFileObject nullableFileObject =
         JavaFileObjects.forSourceLines(
-            "org.jspecify.nullness.Nullable",
+            "org.checkerframework.checker.nullness.qual.Nullable",
             "package org.jspecify.nullness;",
             "",
             "import java.lang.annotation.ElementType;",

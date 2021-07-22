@@ -118,7 +118,10 @@ public class AutoValueCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
+            .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")
         .hasSourceEquivalentTo(expectedOutput);
@@ -216,7 +219,10 @@ public class AutoValueCompilationTest {
             "  }",
             "}");
     Compilation compilation =
-        javac().withProcessors(new AutoValueProcessor()).compile(javaFileObject);
+        javac()
+            .withProcessors(new AutoValueProcessor())
+            .withOptions("-A" + Nullables.NULLABLE_OPTION + "=")
+            .compile(javaFileObject);
     assertThat(compilation)
         .generatedSourceFile("foo.bar.AutoValue_Baz")
         .hasSourceEquivalentTo(expectedOutput);
@@ -347,7 +353,8 @@ public class AutoValueCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
-            .withOptions("-Xlint:-processing", "-implicit:none")
+            .withOptions(
+                "-Xlint:-processing", "-implicit:none", "-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(annotFileObject, outerFileObject, nestyFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -1311,17 +1318,19 @@ public class AutoValueCompilationTest {
                 + "NestedAutoValue.builder();",
             "        this.aNestedAutoValue = aNestedAutoValue$builder.build();",
             "      }",
-            "      String missing = \"\";",
-            "      if (this.anInt == null) {",
-            "        missing += \" anInt\";",
-            "      }",
-            "      if (this.aByteArray == null) {",
-            "        missing += \" aByteArray\";",
-            "      }",
-            "      if (this.aList == null) {",
-            "        missing += \" aList\";",
-            "      }",
-            "      if (!missing.isEmpty()) {",
+            "      if (this.anInt == null",
+            "          || this.aByteArray == null",
+            "          || this.aList == null) {",
+            "        StringBuilder missing = new StringBuilder();",
+            "        if (this.anInt == null) {",
+            "          missing.append(\" anInt\");",
+            "        }",
+            "        if (this.aByteArray == null) {",
+            "          missing.append(\" aByteArray\");",
+            "        }",
+            "        if (this.aList == null) {",
+            "          missing.append(\" aList\");",
+            "        }",
             "        throw new IllegalStateException(\"Missing required properties:\" + missing);",
             "      }",
             "      return new AutoValue_Baz<T>(",
@@ -1338,7 +1347,8 @@ public class AutoValueCompilationTest {
     Compilation compilation =
         javac()
             .withProcessors(new AutoValueProcessor())
-            .withOptions("-Xlint:-processing", "-implicit:none")
+            .withOptions(
+                "-Xlint:-processing", "-implicit:none", "-A" + Nullables.NULLABLE_OPTION + "=")
             .compile(javaFileObject, nestedJavaFileObject);
     assertThat(compilation).succeededWithoutWarnings();
     assertThat(compilation)
@@ -1767,7 +1777,8 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Item")
+        .hadErrorContaining(
+            "Method setTitle does not correspond to a property method of foo.bar.Item")
         .inFile(javaFileObject)
         .onLineContaining("Builder setTitle(String title)");
     assertThat(compilation)
@@ -1801,7 +1812,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Baz")
+        .hadErrorContaining("Method blim does not correspond to a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("Builder blim(int x)");
   }
@@ -2514,7 +2525,7 @@ public class AutoValueCompilationTest {
             .withProcessors(new AutoValueProcessor(), new AutoValueBuilderProcessor())
             .compile(javaFileObject);
     assertThat(compilation)
-        .hadErrorContaining("Method does not correspond to a property method of foo.bar.Baz")
+        .hadErrorContaining("Method whut does not correspond to a property method of foo.bar.Baz")
         .inFile(javaFileObject)
         .onLineContaining("void whut(String x)");
   }
@@ -3369,6 +3380,40 @@ public class AutoValueCompilationTest {
     public SourceVersion getSupportedSourceVersion() {
       return SourceVersion.latestSupported();
     }
+  }
+
+  // This is a regression test for the problem described in
+  // https://github.com/google/auto/issues/1087.
+  @Test
+  public void kotlinMetadataAnnotationsAreImplicitlyExcludedFromCopying() {
+    JavaFileObject metadata =
+        JavaFileObjects.forSourceLines(
+            "kotlin.Metadata", "package kotlin;", "", "public @interface Metadata {", "}");
+    JavaFileObject test =
+        JavaFileObjects.forSourceLines(
+            "foo.bar.Test",
+            "package foo.bar;",
+            "",
+            "import com.google.auto.value.AutoValue;",
+            "import kotlin.Metadata;",
+            "",
+            "@AutoValue.CopyAnnotations",
+            "@Metadata",
+            "@AutoValue",
+            "public abstract class Test {",
+            "  public abstract String string();",
+            "}");
+    AutoValueProcessor autoValueProcessor = new AutoValueProcessor();
+    Compilation compilation =
+        javac()
+            .withProcessors(autoValueProcessor)
+            .withOptions("-Xlint:-processing", "-implicit:none")
+            .compile(test, metadata);
+    assertThat(compilation).succeededWithoutWarnings();
+    assertThat(compilation)
+        .generatedSourceFile("foo.bar.AutoValue_Test")
+        .contentsAsUtf8String()
+        .doesNotContain("kotlin.Metadata");
   }
 
   private String sorted(String... imports) {

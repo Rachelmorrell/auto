@@ -17,8 +17,8 @@ package com.google.auto.service.processor;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotationValue;
 import static com.google.auto.common.MoreElements.getAnnotationMirror;
+import static com.google.auto.common.MoreStreams.toImmutableSet;
 import static com.google.common.base.Throwables.getStackTraceAsString;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
@@ -59,10 +59,10 @@ import javax.tools.StandardLocation;
  * <p>
  * Processor Options:<ul>
  *   <li>{@code -Adebug} - turns on debug statements</li>
-     <li>{@code -Averify=true} - turns on extra verification</li>
+ *   <li>{@code -Averify=true} - turns on extra verification</li>
  * </ul>
  */
-@SupportedOptions({ "debug", "verify" })
+@SupportedOptions({"debug", "verify"})
 public class AutoServiceProcessor extends AbstractProcessor {
 
   @VisibleForTesting
@@ -122,8 +122,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
     }
   }
 
-  private void processAnnotations(Set<? extends TypeElement> annotations,
-      RoundEnvironment roundEnv) {
+  private void processAnnotations(
+      Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
 
     Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(AutoService.class);
 
@@ -148,9 +148,11 @@ public class AutoServiceProcessor extends AbstractProcessor {
         if (checkImplementer(providerImplementer, providerType, annotationMirror)) {
           providers.put(getBinaryName(providerType), getBinaryName(providerImplementer));
         } else {
-          String message = "ServiceProviders must implement their service provider interface. "
-              + providerImplementer.getQualifiedName() + " does not implement "
-              + providerType.getQualifiedName();
+          String message =
+              "ServiceProviders must implement their service provider interface. "
+                  + providerImplementer.getQualifiedName()
+                  + " does not implement "
+                  + providerType.getQualifiedName();
           error(message, e, annotationMirror);
         }
       }
@@ -170,8 +172,8 @@ public class AutoServiceProcessor extends AbstractProcessor {
           // before we attempt to get the resource in case the behavior
           // of filer.getResource does change to match the spec, but there's
           // no good way to resolve CLASS_OUTPUT without first getting a resource.
-          FileObject existingFile = filer.getResource(StandardLocation.CLASS_OUTPUT, "",
-              resourceFile);
+          FileObject existingFile =
+              filer.getResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
           log("Looking for existing resource file at " + existingFile.toUri());
           Set<String> oldServices = ServicesFiles.readServiceFile(existingFile.openInputStream());
           log("Existing service entries: " + oldServices);
@@ -186,15 +188,14 @@ public class AutoServiceProcessor extends AbstractProcessor {
         }
 
         Set<String> newServices = new HashSet<>(providers.get(providerInterface));
-        if (allServices.containsAll(newServices)) {
+        if (!allServices.addAll(newServices)) {
           log("No new service entries being added.");
-          return;
+          continue;
         }
 
-        allServices.addAll(newServices);
         log("New service file contents: " + allServices);
-        FileObject fileObject = filer.createResource(StandardLocation.CLASS_OUTPUT, "",
-            resourceFile);
+        FileObject fileObject =
+            filer.createResource(StandardLocation.CLASS_OUTPUT, "", resourceFile);
         try (OutputStream out = fileObject.openOutputStream()) {
           ServicesFiles.writeServiceFile(allServices, out);
         }
@@ -301,8 +302,7 @@ public class AutoServiceProcessor extends AbstractProcessor {
               @Override
               public ImmutableSet<DeclaredType> visitArray(
                   List<? extends AnnotationValue> values, Void v) {
-                return values
-                    .stream()
+                return values.stream()
                     .flatMap(value -> value.accept(this, null).stream())
                     .collect(toImmutableSet());
               }
